@@ -138,23 +138,31 @@ foreach ($folder in $folders) {
     $hits = @()
     foreach ($item in $components) {
         $filePath = Join-Path -Path $folderPath -ChildPath $item.File
-        $found = $false
+        $matchedPath = $null
         if (Test-Path -Path $filePath -PathType Leaf) {
-            $found = $true
+            $matchedPath = $filePath
         }
         else {
             # 递归查找（-Recurse 会深入所有子目录）
-            $found = [bool](Get-ChildItem -Path $folderPath -Filter $item.File -File -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1)
+            $foundItem = Get-ChildItem -Path $folderPath -Filter $item.File -File -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+            if ($foundItem) {
+                $matchedPath = $foundItem.FullName
+            }
         }
-        $hits += $found
+        
+        # 将找到的完整路径（或 $null）存入数组
+        $hits += $matchedPath
     }
 
-    # 仅记录检测到组件的目录
-    if ($hits -contains $true) {
+    # 过滤掉 $null 和空字符串，获取所有找到的有效路径
+    $validHits = $hits | Where-Object { $_ }
+    
+    # 只要找到至少一个有效路径就添加结果
+    if ($validHits.Count -gt 0) {
         $results += [PSCustomObject]@{
             Name  = $folderName
-            Hits  = $hits
-            Count = ($hits | Where-Object { $_ }).Count
+            Hits  = $validHits      # 如果想保留原始对应关系（含 $null），也可以直接写 $hits
+            Count = $validHits.Count
         }
     }
 
@@ -192,11 +200,12 @@ foreach ($r in $results) {
     for ($i = 0; $i -lt $components.Count; $i++) {
         $item = $components[$i]
         $fileName = $item.File.PadRight(18)
-        if ($r.Hits[$i]) {
-            Write-Host "     ${C_GREEN}[✅] ${C_RESET}$($item.Name) ${C_GRAY}${fileName}"
+        $hitPath = $r.Hits[$i]
+        if ($hitPath) {
+            Write-Host "     ${C_GREEN}[✅] ${C_RESET}$($item.Name) ${C_GRAY}$hitPath"
         }
         else {
-            Write-Host "     ${C_GRAY}[❌] ${C_RESET}$($item.Name) ${C_GRAY}${fileName}"
+            Write-Host "     ${C_GRAY}[❌] ${C_RESET}$($item.Name) ${C_GRAY}$hitPath"
         }
     }
 }
