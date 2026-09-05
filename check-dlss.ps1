@@ -13,7 +13,6 @@ $C_GREEN = "$e[92m"
 $C_CYAN = "$e[96m"
 $C_GRAY = "$e[90m"
 $C_YELLOW = "$e[93m"
-$C_RED = "$e[91m"
 $C_BOLD = "$e[1m"
 
 # 设置控制台输出为 UTF-8，确保进度条块字符与符号正确显示
@@ -42,7 +41,7 @@ function Get-DisplayWidth {
 }
 
 # 按显示宽度右侧补齐空格
-function Pad-DisplayRight {
+function Update-Pad-DisplayRight {
     param([string]$Text, [int]$Width)
     $pad = $Width - (Get-DisplayWidth $Text)
     if ($pad -lt 0) { $pad = 0 }
@@ -50,7 +49,7 @@ function Pad-DisplayRight {
 }
 
 # 按显示宽度左侧补齐空格
-function Pad-DisplayLeft {
+function Update-Pad-DisplayLeft {
     param([string]$Text, [int]$Width)
     $pad = $Width - (Get-DisplayWidth $Text)
     if ($pad -lt 0) { $pad = 0 }
@@ -119,9 +118,9 @@ function Write-ScanProgress {
 
     $shortName = if ($name.Length -gt 20) { $name.Substring(0, 20) + "…" } else { $name }
     $progressLine = "  ${C_CYAN}[${C_RESET}${C_GREEN}${bar}${C_RESET}${C_CYAN}]${C_RESET} " +
-                    "${C_YELLOW}$(Pad-DisplayLeft ($percent.ToString() + '%') 4)${C_RESET} " +
+                    "${C_YELLOW}$(Update-Pad-DisplayLeft ($percent.ToString() + '%') 4)${C_RESET} " +
                     "${C_GRAY}($($completed.ToString().PadLeft($total.ToString().Length))/$total)${C_RESET}  " +
-                    "${C_GRAY}${label}: ${C_RESET}${C_CYAN}$(Pad-DisplayRight $shortName $nameColW)${C_RESET}"
+                    "${C_GRAY}${label}: ${C_RESET}${C_CYAN}$(Update-Pad-DisplayRight $shortName $nameColW)${C_RESET}"
     Write-Host "`r$progressLine" -NoNewline
 }
 
@@ -161,7 +160,7 @@ foreach ($folder in $folders) {
     if ($validHits.Count -gt 0) {
         $results += [PSCustomObject]@{
             Name  = $folderName
-            Hits  = $validHits      # 如果想保留原始对应关系（含 $null），也可以直接写 $hits
+            Hits  = $hits
             Count = $validHits.Count
         }
     }
@@ -199,7 +198,6 @@ foreach ($r in $results) {
 
     for ($i = 0; $i -lt $components.Count; $i++) {
         $item = $components[$i]
-        $fileName = $item.File.PadRight(18)
         $hitPath = $r.Hits[$i]
         if ($hitPath) {
             Write-Host "     ${C_GREEN}[✅] ${C_RESET}$($item.Name) ${C_GRAY}$hitPath"
